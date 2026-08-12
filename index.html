@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Memora</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface-hover: #1a1a25;
+            --border: #252535;
+            --text: #e8e8f0;
+            --text-muted: #6b6b8a;
+            --accent: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --green: #22c55e;
+            --red: #ef4444;
+            --yellow: #eab308;
+            --cyan: #06b6d4;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .app { max-width: 430px; margin: 0 auto; min-height: 100vh; position: relative; }
+
+        /* Header */
+        .header {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo span { font-size: 12px; font-weight: 500; color: var(--text-muted); -webkit-text-fill-color: var(--text-muted); }
+        .user-badge {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px;
+        }
+
+        /* Bottom Nav */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .nav-item.active { color: var(--accent); }
+        .nav-item svg { width: 24px; height: 24px; }
+
+        /* Screens */
+        .screen { display: none; padding: 16px 20px 100px; animation: fadeIn 0.3s ease; }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        .card:hover { border-color: var(--accent); }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .token-icon {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .token-info h3 { font-size: 16px; font-weight: 600; }
+        .token-info p { font-size: 12px; color: var(--text-muted); }
+        .price { font-size: 20px; font-weight: 700; }
+        .change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .change.up { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+        .change.down { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+        /* Search */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .search-input {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: var(--accent); }
+        .search-btn {
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border: none;
+            border-radius: 12px;
+            padding: 14px 20px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .search-btn:active { transform: scale(0.95); }
+
+        /* Labels */
+        .label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 2px;
+        }
+        .label-whale { background: rgba(6, 182, 212, 0.15); color: var(--cyan); }
+        .label-dev { background: rgba(139, 92, 246, 0.15); color: var(--accent); }
+        .label-bot { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+        .label-baby { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+        .label-scam { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+        /* AI Panel */
+        .ai-chat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            min-height: 300px;
+        }
+        .ai-message {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .ai-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #c084fc);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .ai-bubble {
+            background: var(--surface-hover);
+            border-radius: 12px;
+            padding: 10px 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            max-width: 85%;
+        }
+        .ai-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .ai-input input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+        .ai-input button {
+            background: var(--accent);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 18px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .stat-item {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .stat-item .value { font-size: 18px; font-weight: 700; color: var(--accent); }
+        .stat-item .label-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Alert badge */
+        .alert-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 8px; height: 8px;
+            background: var(--red);
+            border-radius: 50%;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .wallet-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .wallet-row:last-child { border-bottom: none; }
+        .wallet-addr { font-family: monospace; font-size: 13px; color: var(--text-muted); }
+        .wallet-balance { font-weight: 600; font-size: 14px; }
+
+        .verdict-box {
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            text-align: center;
+        }
+        .verdict-safe { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .verdict-risk { background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); }
+        .verdict-scam { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .verdict-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .verdict-desc { font-size: 13px; color: var(--text-muted); }
+
+        .create-agent-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border: none;
+            border-radius: 14px;
+            padding: 16px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+        .create-agent-btn:active { transform: scale(0.98); }
+
+        .agent-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .agent-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .agent-card p { font-size: 12px; color: var(--text-muted); }
+        .agent-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .status-active { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+        .status-paused { background: rgba(107, 107, 138, 0.15); color: var(--text-muted); }
+
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">Memora <span>β</span></div>
+            <div class="user-badge" id="userBadge">?</div>
+        </div>
+
+        <!-- Screen: Widget (Home) -->
+        <div class="screen active" id="screen-widget">
+            <div class="section-title">🔥 Тренды Solana</div>
+            <div id="trendingList">
+                <div class="loading"><div class="spinner"></div> Загрузка...</div>
+            </div>
+        </div>
+
+        <!-- Screen: Dashboard / Search -->
+        <div class="screen" id="screen-dashboard">
+            <div class="section-title">🔍 Ищейка</div>
+            <div class="search-box">
+                <input type="text" class="search-input" id="tokenInput" placeholder="Адрес контракта SOL..." maxlength="44">
+                <button class="search-btn" onclick="analyzeToken()">Анализ</button>
+            </div>
+            <div id="analysisResult"></div>
+        </div>
+
+        <!-- Screen: Labels -->
+        <div class="screen" id="screen-labels">
+            <div class="section-title">🏷️ Этикетка</div>
+            <div class="search-box">
+                <input type="text" class="search-input" id="walletInput" placeholder="Адрес кошелька..." maxlength="44">
+                <button class="search-btn" onclick="labelWallet()">Проверить</button>
+            </div>
+            <div id="labelResult"></div>
+        </div>
+
+        <!-- Screen: AI Guardian -->
+        <div class="screen" id="screen-guardian">
+            <div class="section-title">🛡️ Страж</div>
+            <button class="create-agent-btn" onclick="createAgent()">+ Создать AI-агента</button>
+            <div id="agentsList"></div>
+            <div class="ai-chat" style="margin-top: 16px;">
+                <div id="chatMessages">
+                    <div class="ai-message">
+                        <div class="ai-avatar">🛡️</div>
+                        <div class="ai-bubble">Привет! Я Страж — твой AI-аналитик мем-коинов. Спроси меня о любом токене или создай агента для отслеживания.</div>
+                    </div>
+                </div>
+                <div class="ai-input">
+                    <input type="text" id="aiInput" placeholder="Спроси Стража..." onkeypress="if(event.key==='Enter')sendAI()">
+                    <button onclick="sendAI()">→</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Nav -->
+        <div class="nav">
+            <div class="nav-item active" onclick="switchTab('widget')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Виджет
+            </div>
+            <div class="nav-item" onclick="switchTab('dashboard')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                Ищейка
+            </div>
+            <div class="nav-item" onclick="switchTab('labels')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+                Этикетка
+            </div>
+            <div class="nav-item" onclick="switchTab('guardian')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Страж
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp init
+        let tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            document.getElementById('userBadge').textContent = tg.initDataUnsafe?.user?.first_name?.[0] || 'U';
+        }
+
+        const API_URL = 'https://memora-api.onrender.com'; // Замени на свой Render URL
+
+        function switchTab(tab) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('screen-' + tab).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        // ========== WIDGET: Load trending ==========
+        async function loadTrending() {
+            const container = document.getElementById('trendingList');
+            try {
+                const res = await fetch(`${API_URL}/api/trending`);
+                const data = await res.json();
+                container.innerHTML = data.tokens.map(t => `
+                    <div class="card" onclick="prefillSearch('${t.address}')">
+                        <div class="card-header">
+                            <div class="token-icon">${t.symbol?.[0] || '?'}</div>
+                            <div class="token-info">
+                                <h3>${t.name} <span style="color:var(--text-muted)">$${t.symbol}</span></h3>
+                                <p>${t.address.slice(0,6)}...${t.address.slice(-4)}</p>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span class="price">$${t.price?.toFixed(6) || '0.000000'}</span>
+                            <span class="change ${t.change24h >= 0 ? 'up' : 'down'}">
+                                ${t.change24h >= 0 ? '▲' : '▼'} ${Math.abs(t.change24h || 0).toFixed(2)}%
+                            </span>
+                        </div>
+                        <div style="margin-top:10px;">
+                            <span class="label ${t.volume24h > 1000000 ? 'label-whale' : 'label-baby'}">
+                                ${t.volume24h > 1000000 ? '🐋 Кит' : '🐣 Китёнок'}
+                            </span>
+                            <span class="label ${t.liquidity > 50000 ? 'label-dev' : 'label-bot'}">
+                                ${t.liquidity > 50000 ? '💧 Ликвидный' : '⚠️ Низкая ликв'}
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                container.innerHTML = '<div class="card"><p style="color:var(--text-muted); text-align:center;">Ошибка загрузки. Проверь подключение.</p></div>';
+            }
+        }
+        loadTrending();
+
+        // ========== DASHBOARD: Analyze token ==========
+        function prefillSearch(addr) {
+            switchTab('dashboard');
+            document.getElementById('tokenInput').value = addr;
+            analyzeToken();
+        }
+
+        async function analyzeToken() {
+            const addr = document.getElementById('tokenInput').value.trim();
+            if (!addr) return;
+            const container = document.getElementById('analysisResult');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div> Анализирую...</div>';
+            try {
+                const res = await fetch(`${API_URL}/api/analyze/${addr}`);
+                const data = await res.json();
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="token-icon">${data.symbol?.[0] || '?'}</div>
+                            <div class="token-info">
+                                <h3>${data.name} <span style="color:var(--text-muted)">$${data.symbol}</span></h3>
+                                <p>${addr.slice(0,6)}...${addr.slice(-4)}</p>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item"><div class="value">$${data.price?.toFixed(8) || '0'}</div><div class="label-text">Цена</div></div>
+                            <div class="stat-item"><div class="value">$${formatNum(data.marketCap)}</div><div class="label-text">Капитализация</div></div>
+                            <div class="stat-item"><div class="value">$${formatNum(data.volume24h)}</div><div class="label-text">Объём 24ч</div></div>
+                            <div class="stat-item"><div class="value">$${formatNum(data.liquidity)}</div><div class="label-text">Ликвидность</div></div>
+                        </div>
+                        <div class="verdict-box ${data.verdict === 'SAFE' ? 'verdict-safe' : data.verdict === 'RISK' ? 'verdict-risk' : 'verdict-scam'}">
+                            <div class="verdict-title">${data.verdict === 'SAFE' ? '✅ Безопасно' : data.verdict === 'RISK' ? '⚠️ Риск' : '🚨 Скам-подозрение'}</div>
+                            <div class="verdict-desc">${data.verdictReason}</div>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <p style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">Топ холдеры:</p>
+                            ${data.topHolders?.map(h => `
+                                <div class="wallet-row">
+                                    <span class="wallet-addr">${h.address.slice(0,6)}...${h.address.slice(-4)}</span>
+                                    <span class="wallet-balance">${h.pct.toFixed(2)}%</span>
+                                    <span class="label ${h.label === 'whale' ? 'label-whale' : h.label === 'dev' ? 'label-dev' : h.label === 'bot' ? 'label-bot' : 'label-baby'}">
+                                        ${h.label === 'whale' ? '🐋 Кит' : h.label === 'dev' ? '👨‍💻 Дев' : h.label === 'bot' ? '🤖 Бот' : '🐣 Китёнок'}
+                                    </span>
+                                </div>
+                            `).join('') || '<p style="color:var(--text-muted); font-size:12px;">Нет данных</p>'}
+                        </div>
+                    </div>
+                `;
+            } catch(e) {
+                container.innerHTML = '<div class="card"><p style="color:var(--red); text-align:center;">Ошибка анализа. Попробуй позже.</p></div>';
+            }
+        }
+
+        // ========== LABELS ==========
+        async function labelWallet() {
+            const addr = document.getElementById('walletInput').value.trim();
+            if (!addr) return;
+            const container = document.getElementById('labelResult');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div> Сканирую...</div>';
+            try {
+                const res = await fetch(`${API_URL}/api/label/${addr}`);
+                const data = await res.json();
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="token-icon">${data.label === 'whale' ? '🐋' : data.label === 'dev' ? '👨‍💻' : data.label === 'bot' ? '🤖' : '🐣'}</div>
+                            <div class="token-info">
+                                <h3>${data.label === 'whale' ? 'Кит' : data.label === 'dev' ? 'Разработчик' : data.label === 'bot' ? 'Бот' : 'Китёнок'}</h3>
+                                <p>${addr.slice(0,6)}...${addr.slice(-4)}</p>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item"><div class="value">$${formatNum(data.balanceUSD)}</div><div class="label-text">Баланс</div></div>
+                            <div class="stat-item"><div class="value">${data.txCount}</div><div class="label-text">Транзакций</div></div>
+                            <div class="stat-item"><div class="value">${data.avgTxValue > 1000 ? '$' + formatNum(data.avgTxValue) : '$' + data.avgTxValue.toFixed(2)}</div><div class="label-text">Средняя сделка</div></div>
+                            <div class="stat-item"><div class="value">${data.ageDays}д</div><div class="label-text">Возраст</div></div>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <span class="label ${data.label === 'whale' ? 'label-whale' : data.label === 'dev' ? 'label-dev' : data.label === 'bot' ? 'label-bot' : 'label-baby'}">
+                                ${data.label === 'whale' ? '🐋 Кит' : data.label === 'dev' ? '👨‍💻 Разработчик' : data.label === 'bot' ? '🤖 Бот' : '🐣 Китёнок'}
+                            </span>
+                            ${data.isScamSuspect ? '<span class="label label-scam">🚨 Скам-подозрение</span>' : ''}
+                        </div>
+                        <p style="margin-top:10px; font-size:12px; color:var(--text-muted);">${data.reason}</p>
+                    </div>
+                `;
+            } catch(e) {
+                container.innerHTML = '<div class="card"><p style="color:var(--red); text-align:center;">Ошибка. Попробуй позже.</p></div>';
+            }
+        }
+
+        // ========== AI GUARDIAN ==========
+        async function sendAI() {
+            const input = document.getElementById('aiInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            const chat = document.getElementById('chatMessages');
+            chat.innerHTML += `<div class="ai-message" style="flex-direction:row-reverse;"><div class="ai-bubble" style="background:var(--accent); color:white;">${msg}</div></div>`;
+            input.value = '';
+            chat.scrollTop = chat.scrollHeight;
+
+            try {
+                const res = await fetch(`${API_URL}/api/ai/chat`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({message: msg, userId: tg?.initDataUnsafe?.user?.id || 'guest'})
+                });
+                const data = await res.json();
+                chat.innerHTML += `<div class="ai-message"><div class="ai-avatar">🛡️</div><div class="ai-bubble">${data.reply}</div></div>`;
+                chat.scrollTop = chat.scrollHeight;
+            } catch(e) {
+                chat.innerHTML += `<div class="ai-message"><div class="ai-avatar">🛡️</div><div class="ai-bubble" style="color:var(--red)">Ошибка соединения. Проверь, что бэкенд запущен.</div></div>`;
+            }
+        }
+
+        async function createAgent() {
+            const name = prompt('Название агента:', 'Мой агент');
+            if (!name) return;
+            const token = prompt('Адрес токена для отслеживания:', '');
+            if (!token) return;
+            try {
+                const res = await fetch(`${API_URL}/api/agents`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({name, tokenAddress: token, userId: tg?.initDataUnsafe?.user?.id || 'guest'})
+                });
+                const data = await res.json();
+                loadAgents();
+                alert('Агент создан!');
+            } catch(e) {
+                alert('Ошибка создания агента');
+            }
+        }
+
+        async function loadAgents() {
+            try {
+                const res = await fetch(`${API_URL}/api/agents?userId=${tg?.initDataUnsafe?.user?.id || 'guest'}`);
+                const data = await res.json();
+                document.getElementById('agentsList').innerHTML = data.agents.map(a => `
+                    <div class="agent-card">
+                        <h4>${a.name}</h4>
+                        <p>Токен: ${a.tokenAddress.slice(0,6)}...${a.tokenAddress.slice(-4)}</p>
+                        <span class="agent-status ${a.active ? 'status-active' : 'status-paused'}">
+                            ${a.active ? '● Активен' : '○ Пауза'}
+                        </span>
+                    </div>
+                `).join('');
+            } catch(e) {
+                document.getElementById('agentsList').innerHTML = '<p style="color:var(--text-muted); text-align:center;">Нет агентов</p>';
+            }
+        }
+        loadAgents();
+
+        function formatNum(n) {
+            if (!n) return '0';
+            if (n >= 1e9) return (n/1e9).toFixed(2) + 'B';
+            if (n >= 1e6) return (n/1e6).toFixed(2) + 'M';
+            if (n >= 1e3) return (n/1e3).toFixed(2) + 'K';
+            return n.toFixed(2);
+        }
+    </script>
+</body>
+</html>
